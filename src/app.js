@@ -2,25 +2,40 @@ const express = require("express");
 
 const app = express();
 
-const { isAuth, isUser } = require("./middlewares/auth");
-
-app.use("/admin", isAuth);
-
-app.get("/admin/getAllData", (req, res) => {
-  res.send("Get all data");
+app.use("/getUser", (req, res) => {
+  // try {
+  throw new Error("gfdgf");
+  res.send("user Data sent");
+  // } catch (err) {
+  //   res.status(500).send("Page not found");
+  // }
 });
 
-app.get("/admin/deleteData", (req, res) => {
-  res.send("Delete Data");
+app.use("/", (err, req, res, next) => {
+  if (err) {
+    res.status(404).send("something went wrong");
+  }
 });
 
-app.post("/user/login", (req, res) => {
-  res.send("user login");
-});
+// const { isAuth, isUser } = require("./middlewares/auth");
 
-app.get("/user", isUser, (req, res) => {
-  res.send("UserData");
-});
+// app.use("/admin", isAuth);
+
+// app.get("/admin/getAllData", (req, res) => {
+//   res.send("Get all data");
+// });
+
+// app.get("/admin/deleteData", (req, res) => {
+//   res.send("Delete Data");
+// });
+
+// app.post("/user/login", (req, res) => {
+//   res.send("user login");
+// });
+
+// app.get("/user", isUser, (req, res) => {
+//   res.send("UserData");
+// });
 
 // app.use(
 //   "/user",
