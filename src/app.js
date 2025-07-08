@@ -1,81 +1,103 @@
 const express = require("express");
+const connectDB = require("./config/database");
+const User = require("./model/user");
 
 const app = express();
 
-app.use("/getUser", (req, res) => {
-  // try {
-  throw new Error("gfdgf");
-  res.send("user Data sent");
-  // } catch (err) {
-  //   res.status(500).send("Page not found");
-  // }
+app.use(express.json()); // to convert the JSON object into JS for all the API's
+
+//POST API to send the data of users on database
+app.post("/signup", async (req, res) => {
+  console.log(req.body);
+  //Creating a new instance on the User model
+  const user = new User(req.body);
+
+  await user.save();
+  res.send("Database successfully connected");
 });
 
-app.use("/", (err, req, res, next) => {
-  if (err) {
-    res.status(404).send("something went wrong");
+// GET user API to find user by email
+app.get("/user", async (req, res) => {
+  const userEmail = req.body.email;
+  try {
+    const user = await User.find({ email: userEmail });
+    if (user === 0) {
+      res.send("User not found");
+    } else {
+      res.send(user);
+    }
+  } catch (err) {
+    res.status(404).send("Something went wrong");
   }
 });
 
-// const { isAuth, isUser } = require("./middlewares/auth");
-
-// app.use("/admin", isAuth);
-
-// app.get("/admin/getAllData", (req, res) => {
-//   res.send("Get all data");
-// });
-
-// app.get("/admin/deleteData", (req, res) => {
-//   res.send("Delete Data");
-// });
-
-// app.post("/user/login", (req, res) => {
-//   res.send("user login");
-// });
-
-// app.get("/user", isUser, (req, res) => {
-//   res.send("UserData");
-// });
-
-// app.use(
-//   "/user",
-//   (req, res, next) => {
-//     // res.send("Namaste");
-//     next();
-//   },
-//   (req, res, next) => {
-//     console.log("handling routes 2nd");
-//     res.send("2nd Namaste");
-//     next();
-//   }
-// );
-
-// This will only handle GET request for /user
-// app.get("/user", (req, res) => {
-//   res.send({ firstname: "Himanshu", lastname: "Adhana" });
-// });
-
-// //This will only handle POST request for / user
-// app.post("/user", (req, res) => {
-//   res.send("Sending user data to DB");
-// });
-
-// // This will handle DELETE request
-// app.delete("/user", (req, res) => {
-//   res.send("Delete user Data");
-// });
-
-// // update the entire resource
-// app.put("/users/:id", (req, res) => res.send(`PUT user ${req.params.id}`));
-
-// // update the partial data of a resource
-// app.patch("/users/:id", (req, res) => res.send(`PATCH user ${req.params.id}`));
-
-// routes based on string patterns
-// app.get("/ab?cd", (req, res) => {
-//   res.send("ab?cd");
-// });
-
-app.listen(7777, () => {
-  console.log("Server listening on port 7777");
+//GET feed API to find data of all the users
+app.get("/feed", async (req, res) => {
+  try {
+    const user = await User.find();
+    if (!user) {
+      res.send("user not found");
+    } else {
+      res.send(user);
+    }
+  } catch (err) {
+    res.status(404).send("Something went wrong");
+  }
 });
+
+// Delete API -> to delete a user
+app.delete("/user", async (req, res) => {
+  const userId = req.body.userId;
+  try {
+    const user = await User.findByIdAndDelete({ _id: userId });
+    //or we can also do like this
+    // const user = await User.findByIdAndDelete(userId);
+    res.send("user deleted successfully");
+  } catch {
+    res.status(404).send("Something went wrong");
+  }
+});
+
+//Update Api -> To update the document or data of user
+app.patch("/user/:userId", async (req, res) => {
+  const userId = req.params?.userId;
+  const data = req.body;
+
+  try {
+    const ALLOWED_UPDATES = [
+      "userId",
+      "photoUrl",
+      "about",
+      "gender",
+      "age",
+      "skills",
+    ];
+
+    const isUpdateAllowed = Object.keys(data).every((k) =>
+      ALLOWED_UPDATES.includes(k)
+    );
+
+    if (!isUpdateAllowed) {
+      throw new Error("Update not allowed");
+    }
+
+    const user = await User.findByIdAndUpdate({ _id: userId }, data, {
+      returnDocument: "after",
+      runValidators: true,
+    });
+    res.send("user updated successfully");
+  } catch {
+    res.status(404).send("Something went wrong");
+  }
+});
+
+connectDB()
+  .then(() => {
+    console.log("Database connection established...");
+    app.listen(7777, () => {
+      console.log("Server listening on port 7777");
+    });
+  })
+  .catch((err) => {
+    console.error("Database cannot be connected!!");
+  });
