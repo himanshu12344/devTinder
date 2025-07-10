@@ -1,19 +1,58 @@
 const express = require("express");
 const connectDB = require("./config/database");
 const User = require("./model/user");
-
+const { validateSignUpData } = require("./utils/validation");
+const bcrypt = require("bcrypt");
 const app = express();
 
 app.use(express.json()); // to convert the JSON object into JS for all the API's
 
 //POST API to send the data of users on database
 app.post("/signup", async (req, res) => {
-  console.log(req.body);
-  //Creating a new instance on the User model
-  const user = new User(req.body);
+  try {
+    // Validation of Data
+    validateSignUpData(req);
 
-  await user.save();
-  res.send("Database successfully connected");
+    const { firstName, lastName, email, password } = req.body;
+
+    // Encrypt the password
+    const passwordHash = await bcrypt.hash(password, 10);
+    console.log(passwordHash);
+
+    //Creating a new instance on the User model
+    const user = new User({
+      firstName,
+      lastName,
+      email,
+      password: passwordHash,
+    });
+
+    await user.save();
+    res.send("User added successfully");
+  } catch (err) {
+    res.status(404).send("ERROR:" + err.message);
+  }
+});
+
+// Login API
+app.post("/login", async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    const user = await User.findOne({ email: email });
+    if (!user) {
+      throw new Error("Invalid Credentials");
+    }
+
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+
+    if (isPasswordValid) {
+      res.send("Login Successfull !!!");
+    } else {
+      throw new Error("Invalid Credentials");
+    }
+  } catch (err) {
+    res.status(404).send("ERROR:" + err.message);
+  }
 });
 
 // GET user API to find user by email
@@ -53,7 +92,7 @@ app.delete("/user", async (req, res) => {
     //or we can also do like this
     // const user = await User.findByIdAndDelete(userId);
     res.send("user deleted successfully");
-  } catch {
+  } catch (err) {
     res.status(404).send("Something went wrong");
   }
 });
@@ -86,7 +125,7 @@ app.patch("/user/:userId", async (req, res) => {
       runValidators: true,
     });
     res.send("user updated successfully");
-  } catch {
+  } catch (err) {
     res.status(404).send("Something went wrong");
   }
 });
