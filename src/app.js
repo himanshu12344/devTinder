@@ -3,9 +3,13 @@ const connectDB = require("./config/database");
 const User = require("./model/user");
 const { validateSignUpData } = require("./utils/validation");
 const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
+const cookieParser = require("cookie-parser");
 const app = express();
+const { userAuth } = require("./middlewares/auth");
 
 app.use(express.json()); // to convert the JSON object into JS for all the API's
+app.use(cookieParser()); // middleware to read all the cookies
 
 //POST API to send the data of users on database
 app.post("/signup", async (req, res) => {
@@ -17,7 +21,6 @@ app.post("/signup", async (req, res) => {
 
     // Encrypt the password
     const passwordHash = await bcrypt.hash(password, 10);
-    console.log(passwordHash);
 
     //Creating a new instance on the User model
     const user = new User({
@@ -46,6 +49,17 @@ app.post("/login", async (req, res) => {
     const isPasswordValid = await bcrypt.compare(password, user.password);
 
     if (isPasswordValid) {
+      // Create a JWT token
+      const token = await jwt.sign({ _id: user._id }, "DevTinder@123", {
+        expiresIn: "1h",
+      });
+
+      // Add the token to cookie and send the response back to the user
+      res.cookie("token", token, {
+        expires: new Date(Date.now() + 8 * 3600000),
+        httpOnly: true,
+      });
+
       res.send("Login Successfull !!!");
     } else {
       throw new Error("Invalid Credentials");
@@ -53,6 +67,23 @@ app.post("/login", async (req, res) => {
   } catch (err) {
     res.status(404).send("ERROR:" + err.message);
   }
+});
+
+// Profile API
+app.get("/profile", userAuth, async (req, res) => {
+  try {
+    const user = req.user;
+
+    res.send(user);
+  } catch (err) {
+    res.status(404).send("ERROR: " + err.message);
+  }
+});
+
+// Send connection request
+app.post("/sendConnectionRequest", userAuth, async (req, res) => {
+  const user = req.user;
+  res.send(user.firstName + "sent the connection request");
 });
 
 // GET user API to find user by email
